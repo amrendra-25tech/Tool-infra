@@ -25,7 +25,7 @@ variable "private_subnet_cidrs" {
 variable "key_name" {
   description = "Name of the EC2 Key Pair to associate with instances"
   type        = string
-  default     = "monitoring-key"
+  default     = "monitoring-system-key"
 }
 
 variable "bastion_instance_type" {
@@ -43,7 +43,7 @@ variable "monitoring_instance_type" {
 variable "git_repo_url" {
   description = "Git repository URL containing the Ansible code (for bootstrapping)"
   type        = string
-  default     = "https://github.com/example/one-click-infra.git" # User will replace this or override it in Jenkins parameters
+  default     = "https://github.com/amrendra-25tech/Tool-infra.git" # User will replace this or override it in Jenkins parameters
 }
 
 variable "git_repo_branch" {
