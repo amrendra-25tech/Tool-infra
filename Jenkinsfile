@@ -5,14 +5,16 @@ pipeline {
         choice(name: 'ACTION', choices: ['apply', 'destroy'], description: 'Terraform action to perform')
         string(name: 'AWS_REGION', defaultValue: 'us-east-1', description: 'AWS Region to deploy to')
         string(name: 'SSH_KEY_CREDENTIAL_ID', defaultValue: 'monitoring-ssh-key', description: 'Jenkins credential ID for the EC2 SSH private key')
-        string(name: 'EC2_KEY_PAIR_NAME', defaultValue: 'monitoring-system-key', description: 'Name of the EC2 Key Pair in AWS')
-        string(name: 'GIT_REPO_URL', defaultValue: 'https://github.com/amrendra-25tech/Tool-infra.git', description: 'Git repository containing this code (for ASG bootstrap)')
+        string(name: 'EC2_KEY_PAIR_NAME', defaultValue: 'monitoring-key', description: 'Name of the EC2 Key Pair in AWS')
+        string(name: 'GIT_REPO_URL', defaultValue: 'https://github.com/example/one-click-infra.git', description: 'Git repository containing this code (for ASG bootstrap)')
         string(name: 'GIT_REPO_BRANCH', defaultValue: 'main', description: 'Git branch to pull for ASG bootstrap')
     }
 
     environment {
-        TF_DIR = 'terraform'
-        ANSIBLE_DIR = 'ansible'
+        AWS_ACCESS_KEY_ID     = credentials('AWS_ACCESS_KEY_ID')
+        AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
+        TF_DIR                = 'terraform'
+        ANSIBLE_DIR           = 'ansible'
     }
 
     stages {
