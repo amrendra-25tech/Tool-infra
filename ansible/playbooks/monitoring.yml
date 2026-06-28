@@ -49,11 +49,9 @@
         group: "{{ item.group }}"
         mode: '0775'
       loop:
-        - { path: '/mnt/efs/prometheus', owner: 'prometheus', group: 'prometheus' }
-        - { path: '/mnt/efs/loki', owner: 'loki', group: 'loki' }
-        - { path: '/mnt/efs/grafana', owner: 'root', group: 'root' }
-        - { path: '/mnt/efs/grafana/data', owner: 'grafana', group: 'grafana' }
-        - { path: '/mnt/efs/grafana/plugins', owner: 'grafana', group: 'grafana' }
+        - { path: '/mnt/efs/prometheus/{{ ansible_hostname }}', owner: 'prometheus', group: 'prometheus' }
+        - { path: '/mnt/efs/loki/{{ ansible_hostname }}', owner: 'loki', group: 'loki' }
+        - { path: '/mnt/efs/grafana/{{ ansible_hostname }}', owner: 'root', group: 'root' }
       ignore_errors: yes # Avoid failing if grafana user is not created yet (will fix after grafana installation)
 
     # 3. INSTALL PROMETHEUS NATIVELY
@@ -223,9 +221,9 @@
         group: grafana
         mode: '0775'
       loop:
-        - /mnt/efs/grafana
-        - /mnt/efs/grafana/data
-        - /mnt/efs/grafana/plugins
+        - "/mnt/efs/grafana/{{ ansible_hostname }}"
+        - "/mnt/efs/grafana/{{ ansible_hostname }}/data"
+        - "/mnt/efs/grafana/{{ ansible_hostname }}/plugins"
 
     - name: Template Grafana configuration file (grafana.ini)
       template:

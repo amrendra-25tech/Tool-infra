@@ -1,14 +1,14 @@
 [paths]
 # Shared directories on the EFS mount
-data = /mnt/efs/grafana/data
-plugins = /mnt/efs/grafana/plugins
+data = /mnt/efs/grafana/{{ ansible_hostname }}/data
+plugins = /mnt/efs/grafana/{{ ansible_hostname }}/plugins
 provisioning = /etc/grafana/provisioning
 logs = /var/log/grafana
 
 [database]
 # Direct the SQLite database to EFS to share dashboard and user configs across nodes
 type = sqlite3
-path = /mnt/efs/grafana/data/grafana.db
+path = /mnt/efs/grafana/{{ ansible_hostname }}/data/grafana.db
 
 [server]
 # Protocol and port settings
