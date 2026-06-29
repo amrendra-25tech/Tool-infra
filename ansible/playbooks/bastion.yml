@@ -16,6 +16,17 @@
         state: present
         update_cache: yes
 
+    - name: Install Rsyslog for system logs
+      dnf:
+        name: rsyslog
+        state: present
+
+    - name: Start and Enable Rsyslog
+      systemd:
+        name: rsyslog
+        state: started
+        enabled: yes
+
     - name: Configure Nginx Stub Status Page
       copy:
         content: |
@@ -39,6 +50,14 @@
         name: nginx
         state: started
         enabled: yes
+
+    - name: Ensure Nginx log directory has group read/execute permissions
+      file:
+        path: /var/log/nginx
+        state: directory
+        mode: '0750'
+        owner: nginx
+        group: nginx
 
     # NODE EXPORTER INSTALLATION
     - name: Create prometheus system group
