@@ -43,7 +43,7 @@ variable "monitoring_instance_type" {
 variable "git_repo_url" {
   description = "Git repository URL containing the Ansible code (for bootstrapping)"
   type        = string
-  default     = "https://github.com/amrendra-25tech/Tool-infra.git" # User will replace this or override it in Jenkins parameters
+  default     = "https://github.com/example/one-click-infra.git" # User will replace this or override it in Jenkins parameters
 }
 
 variable "git_repo_branch" {
