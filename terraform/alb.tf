@@ -28,10 +28,18 @@ resource "aws_lb_target_group" "grafana" {
     unhealthy_threshold = 3
   }
 
+  # Enable Sticky Sessions
+  stickiness {
+    type            = "lb_cookie"
+    cookie_duration = 86400   # 24 hours (in seconds)
+    enabled         = true
+  }
+
   tags = {
     Name = "monitoring-tg-grafana"
   }
 }
+
 
 # Target Group for Loki (Port 3100)
 resource "aws_lb_target_group" "loki" {
