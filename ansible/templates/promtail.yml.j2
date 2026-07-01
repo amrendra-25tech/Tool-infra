@@ -6,7 +6,7 @@ positions:
   filename: /tmp/positions.yaml
 
 clients:
-  - url: "http://{{ loki_alb_endpoint }}/loki/api/v1/push"
+  - url: "http://{{ loki_endpoint }}/loki/api/v1/push"
 
 scrape_configs:
   # Scrape Nginx web server logs on Bastion
