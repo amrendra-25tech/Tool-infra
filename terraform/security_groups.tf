@@ -22,24 +22,6 @@ resource "aws_security_group" "bastion" {
     description = "Nginx Web App HTTP from internet"
   }
 
-  # Scrape port for Node Exporter
-  ingress {
-    from_port       = 9100
-    to_port         = 9100
-    protocol        = "tcp"
-    security_groups = [aws_security_group.private_instances.id]
-    description     = "Allow Prometheus scraping of Node Exporter"
-  }
-
-  # Scrape port for Nginx Exporter
-  ingress {
-    from_port       = 9113
-    to_port         = 9113
-    protocol        = "tcp"
-    security_groups = [aws_security_group.private_instances.id]
-    description     = "Allow Prometheus scraping of Nginx Exporter"
-  }
-
   egress {
     from_port   = 0
     to_port     = 0
@@ -167,4 +149,26 @@ resource "aws_security_group" "efs" {
   tags = {
     Name = "monitoring-efs-sg"
   }
+}
+
+# Separate security group rules to break the circular dependency cycle:
+# bastion -> private_instances -> alb -> bastion
+resource "aws_security_group_rule" "bastion_node_exporter" {
+  type                     = "ingress"
+  from_port                = 9100
+  to_port                  = 9100
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.bastion.id
+  source_security_group_id = aws_security_group.private_instances.id
+  description              = "Allow Prometheus scraping of Node Exporter"
+}
+
+resource "aws_security_group_rule" "bastion_nginx_exporter" {
+  type                     = "ingress"
+  from_port                = 9113
+  to_port                  = 9113
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.bastion.id
+  source_security_group_id = aws_security_group.private_instances.id
+  description              = "Allow Prometheus scraping of Nginx Exporter"
 }
