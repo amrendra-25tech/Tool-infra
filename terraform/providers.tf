@@ -7,13 +7,11 @@ terraform {
     }
   }
 
-  # Remote S3 backend to store the terraform.tfstate file
   backend "s3" {
-    bucket         = "my-terraform-state-bucket-amrendra"
-    key            = "monitoring/state/terraform.tfstate"
-    region         = "us-east-1"
-    encrypt        = true
-    
+    bucket  = "my-terraform-state-bucket-amrendra"
+    key     = "monitoring/state/terraform.tfstate"
+    region  = "us-east-1"
+    encrypt = true
   }
 }
 
