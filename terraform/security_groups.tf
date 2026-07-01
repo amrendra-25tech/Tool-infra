@@ -1,11 +1,44 @@
-##############################################
-# Bastion Security Group
-##############################################
-
+# Security Group for Bastion Host
 resource "aws_security_group" "bastion" {
   name        = "monitoring-bastion-sg"
-  description = "Security Group for Bastion Host"
+  description = "Security group for Bastion host"
   vpc_id      = aws_vpc.main.id
+
+  # SSH Access
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "SSH from internet"
+  }
+
+  # Web App (Nginx) Access
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Nginx Web App HTTP from internet"
+  }
+
+  # Scrape port for Node Exporter
+  ingress {
+    from_port       = 9100
+    to_port         = 9100
+    protocol        = "tcp"
+    security_groups = [aws_security_group.private_instances.id]
+    description     = "Allow Prometheus scraping of Node Exporter"
+  }
+
+  # Scrape port for Nginx Exporter
+  ingress {
+    from_port       = 9113
+    to_port         = 9113
+    protocol        = "tcp"
+    security_groups = [aws_security_group.private_instances.id]
+    description     = "Allow Prometheus scraping of Nginx Exporter"
+  }
 
   egress {
     from_port   = 0
@@ -19,14 +52,29 @@ resource "aws_security_group" "bastion" {
   }
 }
 
-##############################################
-# Application Load Balancer Security Group
-##############################################
-
+# Security Group for Application Load Balancer
 resource "aws_security_group" "alb" {
   name        = "monitoring-alb-sg"
-  description = "Security Group for Public ALB"
+  description = "Security group for public ALB"
   vpc_id      = aws_vpc.main.id
+
+  # Grafana Dashboard Access
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "HTTP for Grafana UI"
+  }
+
+  # Loki API port (for Promtail logs)
+  ingress {
+    from_port       = 3100
+    to_port         = 3100
+    protocol        = "tcp"
+    security_groups = [aws_security_group.bastion.id]
+    description     = "Loki push endpoint from Bastion host"
+  }
 
   egress {
     from_port   = 0
@@ -40,14 +88,47 @@ resource "aws_security_group" "alb" {
   }
 }
 
-##############################################
-# Private EC2 Instances Security Group
-##############################################
-
+# Security Group for Private EC2 Instances (ASG)
 resource "aws_security_group" "private_instances" {
   name        = "monitoring-private-sg"
-  description = "Security Group for Monitoring Servers"
+  description = "Security group for private autoscaled monitoring servers"
   vpc_id      = aws_vpc.main.id
+
+  # SSH from Bastion Host
+  ingress {
+    from_port       = 22
+    to_port         = 22
+    protocol        = "tcp"
+    security_groups = [aws_security_group.bastion.id]
+    description     = "SSH from Bastion"
+  }
+
+  # Grafana UI from ALB
+  ingress {
+    from_port       = 3000
+    to_port         = 3000
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
+    description     = "Grafana port from ALB"
+  }
+
+  # Loki port from ALB (for Promtail log pushes)
+  ingress {
+    from_port       = 3100
+    to_port         = 3100
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
+    description     = "Loki API from ALB"
+  }
+
+  # Prometheus direct port (optional - for troubleshooting/querying from ALB)
+  ingress {
+    from_port       = 9090
+    to_port         = 9090
+    protocol        = "tcp"
+    security_groups = [aws_security_group.alb.id]
+    description     = "Prometheus UI/API from ALB"
+  }
 
   egress {
     from_port   = 0
@@ -61,14 +142,20 @@ resource "aws_security_group" "private_instances" {
   }
 }
 
-##############################################
-# EFS Security Group
-##############################################
-
+# Security Group for EFS Shared File System
 resource "aws_security_group" "efs" {
   name        = "monitoring-efs-sg"
-  description = "Security Group for EFS"
+  description = "Security group for EFS mount targets"
   vpc_id      = aws_vpc.main.id
+
+  # NFS port from Private Instances only
+  ingress {
+    from_port       = 2049
+    to_port         = 2049
+    protocol        = "tcp"
+    security_groups = [aws_security_group.private_instances.id]
+    description     = "NFS traffic from monitoring instances"
+  }
 
   egress {
     from_port   = 0
@@ -80,147 +167,4 @@ resource "aws_security_group" "efs" {
   tags = {
     Name = "monitoring-efs-sg"
   }
-}
-
-##############################################
-# Bastion Rules
-##############################################
-
-resource "aws_vpc_security_group_ingress_rule" "bastion_ssh" {
-  security_group_id = aws_security_group.bastion.id
-
-  cidr_ipv4   = "0.0.0.0/0"
-  from_port   = 22
-  to_port     = 22
-  ip_protocol = "tcp"
-
-  description = "SSH"
-}
-
-resource "aws_vpc_security_group_ingress_rule" "bastion_http" {
-  security_group_id = aws_security_group.bastion.id
-
-  cidr_ipv4   = "0.0.0.0/0"
-  from_port   = 80
-  to_port     = 80
-  ip_protocol = "tcp"
-
-  description = "Nginx"
-}
-
-##############################################
-# ALB Rules
-##############################################
-
-resource "aws_vpc_security_group_ingress_rule" "alb_http" {
-  security_group_id = aws_security_group.alb.id
-
-  cidr_ipv4   = "0.0.0.0/0"
-  from_port   = 80
-  to_port     = 80
-  ip_protocol = "tcp"
-
-  description = "Grafana HTTP"
-}
-
-resource "aws_vpc_security_group_ingress_rule" "alb_loki" {
-  security_group_id = aws_security_group.alb.id
-
-  cidr_ipv4   = "0.0.0.0/0"
-  from_port   = 3100
-  to_port     = 3100
-  ip_protocol = "tcp"
-
-  description = "Loki API"
-}
-
-##############################################
-# Private Instance Rules
-##############################################
-
-# SSH from Bastion
-resource "aws_vpc_security_group_ingress_rule" "private_ssh" {
-  security_group_id            = aws_security_group.private_instances.id
-  referenced_security_group_id = aws_security_group.bastion.id
-
-  from_port   = 22
-  to_port     = 22
-  ip_protocol = "tcp"
-
-  description = "SSH from Bastion"
-}
-
-# Grafana from ALB
-resource "aws_vpc_security_group_ingress_rule" "private_grafana" {
-  security_group_id            = aws_security_group.private_instances.id
-  referenced_security_group_id = aws_security_group.alb.id
-
-  from_port   = 3000
-  to_port     = 3000
-  ip_protocol = "tcp"
-
-  description = "Grafana"
-}
-
-# Loki from ALB
-resource "aws_vpc_security_group_ingress_rule" "private_loki" {
-  security_group_id            = aws_security_group.private_instances.id
-  referenced_security_group_id = aws_security_group.alb.id
-
-  from_port   = 3100
-  to_port     = 3100
-  ip_protocol = "tcp"
-
-  description = "Loki"
-}
-
-# Prometheus (if exposed through ALB later)
-resource "aws_vpc_security_group_ingress_rule" "private_prometheus" {
-  security_group_id            = aws_security_group.private_instances.id
-  referenced_security_group_id = aws_security_group.alb.id
-
-  from_port   = 9090
-  to_port     = 9090
-  ip_protocol = "tcp"
-
-  description = "Prometheus"
-}
-
-# Node Exporter
-resource "aws_vpc_security_group_ingress_rule" "private_node_exporter" {
-  security_group_id            = aws_security_group.private_instances.id
-  referenced_security_group_id = aws_security_group.bastion.id
-
-  from_port   = 9100
-  to_port     = 9100
-  ip_protocol = "tcp"
-
-  description = "Node Exporter"
-}
-
-# Nginx Exporter
-resource "aws_vpc_security_group_ingress_rule" "private_nginx_exporter" {
-  security_group_id            = aws_security_group.private_instances.id
-  referenced_security_group_id = aws_security_group.bastion.id
-
-  from_port   = 9113
-  to_port     = 9113
-  ip_protocol = "tcp"
-
-  description = "Nginx Exporter"
-}
-
-##############################################
-# EFS Rules
-##############################################
-
-resource "aws_vpc_security_group_ingress_rule" "efs_nfs" {
-  security_group_id            = aws_security_group.efs.id
-  referenced_security_group_id = aws_security_group.private_instances.id
-
-  from_port   = 2049
-  to_port     = 2049
-  ip_protocol = "tcp"
-
-  description = "NFS from Private Instances"
 }

@@ -171,7 +171,7 @@ resource "aws_autoscaling_group" "monitoring_asg" {
     value               = "Monitoring"
     propagate_at_launch = true
   }
-  
+
   lifecycle {
     create_before_destroy = true
   }
