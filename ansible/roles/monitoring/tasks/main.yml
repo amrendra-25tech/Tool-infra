@@ -92,6 +92,15 @@
     - consoles
     - console_libraries
 
+- name: Template Prometheus alert rules file
+  template:
+    src: alert.rules.yml.j2
+    dest: /etc/prometheus/alert.rules.yml
+    owner: prometheus
+    group: prometheus
+    mode: '0644'
+  notify: Restart Prometheus
+
 - name: Template Prometheus configuration file
   template:
     src: prometheus.yml.j2
@@ -156,6 +165,23 @@
     group: loki
     mode: '0755'
 
+- name: Create Loki rules tenant directory
+  file:
+    path: /etc/loki/rules/fake
+    state: directory
+    owner: loki
+    group: loki
+    mode: '0755'
+
+- name: Template Loki log alert rules file
+  template:
+    src: loki-alerts.yml.j2
+    dest: /etc/loki/rules/fake/loki-alerts.yml
+    owner: loki
+    group: loki
+    mode: '0644'
+  notify: Restart Loki
+
 - name: Template Loki configuration file
   template:
     src: loki-config.yml.j2
@@ -180,7 +206,66 @@
     state: started
     enabled: yes
 
-# 5. INSTALL GRAFANA NATIVELY (via Official Yum Repo)
+# 5. INSTALL ALERTMANAGER NATIVELY
+- name: Create Alertmanager directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: prometheus
+    group: prometheus
+    mode: '0755'
+  loop:
+    - /etc/alertmanager
+    - /var/lib/alertmanager
+
+- name: Download Alertmanager binary
+  get_url:
+    url: "https://github.com/prometheus/alertmanager/releases/download/v{{ alertmanager_version }}/alertmanager-{{ alertmanager_version }}.linux-amd64.tar.gz"
+    dest: "/tmp/alertmanager.tar.gz"
+
+- name: Extract Alertmanager binary
+  unarchive:
+    src: "/tmp/alertmanager.tar.gz"
+    dest: "/tmp"
+    remote_src: yes
+
+- name: Copy Alertmanager binaries to /usr/local/bin
+  copy:
+    src: "/tmp/alertmanager-{{ alertmanager_version }}.linux-amd64/{{ item }}"
+    dest: "/usr/local/bin/{{ item }}"
+    owner: prometheus
+    group: prometheus
+    mode: '0755'
+    remote_src: yes
+  loop:
+    - alertmanager
+    - amtool
+
+- name: Template Alertmanager configuration file
+  template:
+    src: alertmanager.yml.j2
+    dest: /etc/alertmanager/alertmanager.yml
+    owner: prometheus
+    group: prometheus
+    mode: '0644'
+  notify: Restart Alertmanager
+
+- name: Template Alertmanager systemd unit file
+  template:
+    src: alertmanager.service.j2
+    dest: /etc/systemd/system/alertmanager.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload Systemd
+
+- name: Start and Enable Alertmanager Service
+  systemd:
+    name: alertmanager
+    state: started
+    enabled: yes
+
+# 6. INSTALL GRAFANA NATIVELY (via Official Yum Repo)
 - name: Add Grafana official YUM repository
   copy:
     content: |
