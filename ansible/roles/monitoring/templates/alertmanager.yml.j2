@@ -15,13 +15,15 @@ receivers:
   - name: 'slack-notifications'
     slack_configs:
       - api_url: 'https://hooks.slack.com/services/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' 
-        channel: '#new-channel'       
+        channel: '#new-channel'                
         send_resolved: true
-        title: '[{{ .Status | toUpper }}] Monitoring Notification'
+        title: '{% raw %}[{{ .Status | toUpper }}] Monitoring Notification{% endraw %}'
         text: >-
+          {% raw %}
           {{ range .Alerts }}
             *Alert:* {{ .Annotations.summary }}
             *Severity:* `{{ .Labels.severity }}`
             *Description:* {{ .Annotations.description }}
             *Started At:* {{ .StartsAt.Format "15:04:05 MST" }}
           {{ end }}
+          {% endraw %}
