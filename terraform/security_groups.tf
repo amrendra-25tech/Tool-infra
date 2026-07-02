@@ -51,11 +51,11 @@ resource "aws_security_group" "alb" {
 
   # Loki API port (for Promtail logs)
   ingress {
-    from_port       = 3100
-    to_port         = 3100
-    protocol        = "tcp"
-    security_groups = [aws_security_group.bastion.id]
-    description     = "Loki push endpoint from Bastion host"
+    from_port   = 3100
+    to_port     = 3100
+    protocol    = "tcp"
+    cidr_blocks = ["10.0.0.0/16"]
+    description = "Loki push endpoint from internal VPC"
   }
 
   egress {
@@ -171,4 +171,14 @@ resource "aws_security_group_rule" "bastion_nginx_exporter" {
   security_group_id        = aws_security_group.bastion.id
   source_security_group_id = aws_security_group.private_instances.id
   description              = "Allow Prometheus scraping of Nginx Exporter"
+}
+
+resource "aws_security_group_rule" "alb_loki_from_bastion_public" {
+  type              = "ingress"
+  security_group_id = aws_security_group.alb.id
+  from_port         = 3100
+  to_port           = 3100
+  protocol          = "tcp"
+  cidr_blocks       = ["${aws_eip.bastion.public_ip}/32"]
+  description       = "Allow Loki push from Bastion public EIP"
 }
