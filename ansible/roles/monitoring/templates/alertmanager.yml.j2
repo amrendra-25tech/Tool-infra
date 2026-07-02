@@ -14,8 +14,8 @@ route:
 receivers:
   - name: 'slack-notifications'
     slack_configs:
-      - api_url: 'YOUR_SLACK_WEBHOOK_URL' # <--- Paste your Slack Webhook URL here!
-        channel: '#alerts'                # <--- Change this to your Slack channel!
+      - api_url: 'https://hooks.slack.com/services/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' 
+        channel: '#new-channel'       
         send_resolved: true
         title: '[{{ .Status | toUpper }}] Monitoring Notification'
         text: >-
